@@ -6,12 +6,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
 
-// RedirectPolicy represents the redirect policy for Client.
 type RedirectPolicy func(req *http.Request, via []*http.Request) error
 
-// MaxRedirectPolicy specifies the max number of redirect
 func MaxRedirectPolicy(noOfRedirect int) RedirectPolicy {
 	return func(req *http.Request, via []*http.Request) error {
 		if len(via) >= noOfRedirect {
@@ -21,21 +21,16 @@ func MaxRedirectPolicy(noOfRedirect int) RedirectPolicy {
 	}
 }
 
-// DefaultRedirectPolicy allows up to 10 redirects
 func DefaultRedirectPolicy() RedirectPolicy {
 	return MaxRedirectPolicy(10)
 }
 
-// NoRedirectPolicy disable redirect behaviour
 func NoRedirectPolicy() RedirectPolicy {
 	return func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	}
 }
 
-// SameDomainRedirectPolicy allows redirect only if the redirected domain
-// is the same as original domain, e.g. redirect to "www.imroc.cc" from
-// "imroc.cc" is allowed, but redirect to "google.com" is not allowed.
 func SameDomainRedirectPolicy() RedirectPolicy {
 	return func(req *http.Request, via []*http.Request) error {
 		if getDomain(req.URL.Host) != getDomain(via[0].URL.Host) {
@@ -45,9 +40,6 @@ func SameDomainRedirectPolicy() RedirectPolicy {
 	}
 }
 
-// SameHostRedirectPolicy allows redirect only if the redirected host
-// is the same as original host, e.g. redirect to "www.imroc.cc" from
-// "imroc.cc" is not the allowed.
 func SameHostRedirectPolicy() RedirectPolicy {
 	return func(req *http.Request, via []*http.Request) error {
 		if getHostname(req.URL.Host) != getHostname(via[0].URL.Host) {
@@ -57,12 +49,10 @@ func SameHostRedirectPolicy() RedirectPolicy {
 	}
 }
 
-// AllowedHostRedirectPolicy allows redirect only if the redirected host
-// match one of the host that specified.
 func AllowedHostRedirectPolicy(hosts ...string) RedirectPolicy {
 	m := make(map[string]struct{})
 	for _, h := range hosts {
-		m[strings.ToLower(getHostname(h))] = struct{}{}
+		m[strings.ToLower(extractHostname(h))] = struct{}{}
 	}
 
 	return func(req *http.Request, via []*http.Request) error {
@@ -74,12 +64,10 @@ func AllowedHostRedirectPolicy(hosts ...string) RedirectPolicy {
 	}
 }
 
-// AllowedDomainRedirectPolicy allows redirect only if the redirected domain
-// match one of the domain that specified.
 func AllowedDomainRedirectPolicy(hosts ...string) RedirectPolicy {
 	domains := make(map[string]struct{})
 	for _, h := range hosts {
-		domains[strings.ToLower(getDomain(h))] = struct{}{}
+		domains[strings.ToLower(extractDomain(h))] = struct{}{}
 	}
 
 	return func(req *http.Request, via []*http.Request) error {
@@ -91,33 +79,57 @@ func AllowedDomainRedirectPolicy(hosts ...string) RedirectPolicy {
 	}
 }
 
-func getHostname(host string) (hostname string) {
-	if strings.Index(host, ":") > 0 {
-		host, _, _ = net.SplitHostPort(host)
+func stripPort(host string) string {
+	if strings.HasPrefix(host, "[") {
+		closeBracket := strings.Index(host, "]")
+		if closeBracket >= 0 {
+			return host[:closeBracket+1]
+		}
+		return host
 	}
-	hostname = strings.ToLower(host)
-	return
+	colonPos := strings.Index(host, ":")
+	if colonPos >= 0 {
+		return host[:colonPos]
+	}
+	return host
+}
+
+func stripUserInfo(host string) string {
+	atIdx := strings.LastIndex(host, "@")
+	if atIdx >= 0 {
+		return host[atIdx+1:]
+	}
+	return host
+}
+
+func getHostname(host string) string {
+	host = stripUserInfo(host)
+	host = stripPort(host)
+	host = strings.TrimPrefix(host, "[")
+	host = strings.TrimSuffix(host, "]")
+	return strings.ToLower(host)
+}
+
+func extractHostname(host string) string {
+	return getHostname(host)
 }
 
 func getDomain(host string) string {
-	host = getHostname(host)
-	ss := strings.Split(host, ".")
-	if len(ss) < 3 {
-		return host
+	hostname := getHostname(host)
+	if net.ParseIP(hostname) != nil {
+		return hostname
 	}
-	ss = ss[1:]
-	return strings.Join(ss, ".")
+	domain, err := publicsuffix.EffectiveTLDPlusOne(hostname)
+	if err != nil {
+		return hostname
+	}
+	return strings.ToLower(domain)
 }
 
-// AlwaysCopyHeaderRedirectPolicy ensures that the given sensitive headers will
-// always be copied on redirect.
-// By default, golang will copy all of the original request's headers on redirect,
-// unless they're sensitive, like "Authorization" or "Www-Authenticate". Only send
-// sensitive ones to the same origin, or subdomains thereof (https://go-review.googlesource.com/c/go/+/28930/)
-// Check discussion: https://github.com/golang/go/issues/4800
-// For example:
-//
-//	client.SetRedirectPolicy(req.AlwaysCopyHeaderRedirectPolicy("Authorization"))
+func extractDomain(host string) string {
+	return getDomain(host)
+}
+
 func AlwaysCopyHeaderRedirectPolicy(headers ...string) RedirectPolicy {
 	return func(req *http.Request, via []*http.Request) error {
 		for _, header := range headers {

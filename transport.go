@@ -680,10 +680,13 @@ func (t *Transport) wrapResponseBody(res *http.Response, wrap wrapResponseBodyFu
 }
 
 func (t *Transport) autoDecodeResponseBody(res *http.Response) {
-	if t.disableAutoDecode || res.Header.Get("Accept-Encoding") != "" {
+	if t.disableAutoDecode {
 		return
 	}
 	contentType := res.Header.Get("Content-Type")
+	if contentType == "" {
+		return
+	}
 	var shouldDecode func(contentType string) bool
 	if t.autoDecodeContentType != nil {
 		shouldDecode = t.autoDecodeContentType
@@ -700,7 +703,7 @@ func (t *Transport) autoDecodeResponseBody(res *http.Response) {
 		}
 	} else if charset, ok := params["charset"]; ok {
 		charset = strings.ToLower(charset)
-		if strings.Contains(charset, "utf-8") || strings.Contains(charset, "utf8") { // do not decode utf-8
+		if strings.Contains(charset, "utf-8") || strings.Contains(charset, "utf8") {
 			return
 		}
 		enc, _ := htmlcharset.Lookup(charset)

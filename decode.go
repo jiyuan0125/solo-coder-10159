@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var textContentTypes = []string{"text", "json", "xml", "html", "java"}
+var textContentTypes = []string{"text/", "json", "xml", "html", "javascript"}
 
 var autoDecodeText = autoDecodeContentTypeFunc(textContentTypes...)
 
@@ -14,6 +14,9 @@ func autoDecodeContentTypeFunc(contentTypes ...string) func(contentType string) 
 	return func(contentType string) bool {
 		for _, ct := range contentTypes {
 			if strings.Contains(contentType, ct) {
+				if ct == "json" && (strings.Contains(contentType, "jsonl") || strings.Contains(contentType, "jsonlines") || strings.Contains(contentType, "x-jsonlines")) {
+					continue
+				}
 				return true
 			}
 		}

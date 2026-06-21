@@ -10,6 +10,10 @@ import (
 
 // IsJSONType method is to check JSON content type or not
 func IsJSONType(ct string) bool {
+	ct = strings.ToLower(ct)
+	if strings.Contains(ct, "jsonl") || strings.Contains(ct, "jsonlines") || strings.Contains(ct, "x-jsonlines") {
+		return false
+	}
 	return strings.Contains(ct, "json")
 }
 

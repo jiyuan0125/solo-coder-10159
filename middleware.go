@@ -154,32 +154,41 @@ func handleMultiPart(c *Client, r *Request) (err error) {
 		b = c.multipartBoundaryFunc()
 	}
 
-	if r.forceChunkedEncoding {
-		pr, pw := io.Pipe()
-		r.GetBody = func() (io.ReadCloser, error) {
-			return pr, nil
+	buf := new(bytes.Buffer)
+	var bodyWriter io.Writer = buf
+	var chunkedW *callbackWriter
+	if r.forceChunkedEncoding && r.uploadCallback != nil {
+		chunkedW = &callbackWriter{
+			Writer:   buf,
+			lastTime: time.Now(),
+			interval: r.uploadCallbackInterval,
+			callback: func(written int64) {
+			},
 		}
-		w := multipart.NewWriter(pw)
-		if len(b) > 0 {
-			w.SetBoundary(b)
+		bodyWriter = chunkedW
+	}
+
+	w := multipart.NewWriter(bodyWriter)
+	if len(b) > 0 {
+		w.SetBoundary(b)
+	}
+	writeMultiPart(r, w)
+
+	r.Body = buf.Bytes()
+	r.SetContentType(w.FormDataContentType())
+	r.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(r.Body)), nil
+	}
+
+	if r.forceChunkedEncoding && r.uploadCallback != nil {
+		totalSize := int64(len(r.Body))
+		chunkedW.totalSize = totalSize
+		chunkedW.callback = func(written int64) {
+			r.uploadCallback(UploadInfo{
+				UploadedSize: written,
+				FileSize:     totalSize,
+			})
 		}
-		r.SetContentType(w.FormDataContentType())
-		go func() {
-			writeMultiPart(r, w)
-			pw.Close() // close pipe writer so that pipe reader could get EOF, and stop upload
-		}()
-	} else {
-		buf := new(bytes.Buffer)
-		w := multipart.NewWriter(buf)
-		if len(b) > 0 {
-			w.SetBoundary(b)
-		}
-		writeMultiPart(r, w)
-		r.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(buf.Bytes())), nil
-		}
-		r.Body = buf.Bytes()
-		r.SetContentType(w.FormDataContentType())
 	}
 	return
 }
@@ -293,14 +302,18 @@ func parseRequestBody(c *Client, r *Request) (err error) {
 }
 
 func unmarshalBody(c *Client, r *Response, v any) (err error) {
-	body, err := r.ToBytes() // in case req.SetResult or req.SetError with client.DisableAutoReadResponse(true)
+	body, err := r.ToBytes()
 	if err != nil {
 		return
 	}
 	ct := r.GetContentType()
-	if util.IsJSONType(ct) {
+	mediaType := ct
+	if idx := strings.Index(ct, ";"); idx >= 0 {
+		mediaType = strings.TrimSpace(ct[:idx])
+	}
+	if util.IsJSONType(mediaType) {
 		return c.jsonUnmarshal(body, v)
-	} else if util.IsXMLType(ct) {
+	} else if util.IsXMLType(mediaType) {
 		return c.xmlUnmarshal(body, v)
 	} else {
 		if c.DebugLog {
@@ -315,6 +328,10 @@ func defaultResultStateChecker(resp *Response) ResultState {
 		return SuccessState
 	} else if code > 399 {
 		return ErrorState
+	} else if code > 99 && code < 200 {
+		return SuccessState
+	} else if code == http.StatusNotModified {
+		return SuccessState
 	} else {
 		return UnknownState
 	}
@@ -327,24 +344,27 @@ func parseResponseBody(c *Client, r *Response) (err error) {
 	req := r.Request
 	switch r.ResultState() {
 	case SuccessState:
-		if req.Result != nil && r.StatusCode != http.StatusNoContent {
-			err = unmarshalBody(c, r, r.Request.Result)
+		if req.Result != nil {
+			if r.StatusCode != http.StatusNoContent {
+				err = unmarshalBody(c, r, r.Request.Result)
+			}
 			if err == nil {
 				r.result = r.Request.Result
 			}
 		}
 	case ErrorState:
-		if r.StatusCode == http.StatusNoContent {
-			return
-		}
 		if req.Error != nil {
-			err = unmarshalBody(c, r, req.Error)
+			if r.StatusCode != http.StatusNoContent {
+				err = unmarshalBody(c, r, req.Error)
+			}
 			if err == nil {
 				r.error = req.Error
 			}
 		} else if c.commonErrorType != nil {
 			e := reflect.New(c.commonErrorType).Interface()
-			err = unmarshalBody(c, r, e)
+			if r.StatusCode != http.StatusNoContent {
+				err = unmarshalBody(c, r, e)
+			}
 			if err == nil {
 				r.error = e
 			}
@@ -541,9 +561,20 @@ func parseRequestHeader(c *Client, r *Request) error {
 }
 
 func parseRequestCookie(c *Client, r *Request) error {
-	if len(c.Cookies) > 0 || r.RetryAttempt <= 0 {
-		r.Cookies = append(r.Cookies, c.Cookies...)
+	if r.RetryAttempt > 0 {
+		return nil
 	}
-
+	merged := make([]*http.Cookie, 0, len(c.Cookies)+len(r.Cookies))
+	clientCookieNames := make(map[string]bool, len(c.Cookies))
+	for _, cookie := range r.Cookies {
+		clientCookieNames[cookie.Name] = true
+		merged = append(merged, cookie)
+	}
+	for _, cookie := range c.Cookies {
+		if !clientCookieNames[cookie.Name] {
+			merged = append(merged, cookie)
+		}
+	}
+	r.Cookies = merged
 	return nil
 }
