@@ -149,6 +149,9 @@ func writeMultiPart(r *Request, w *multipart.Writer) {
 }
 
 func handleMultiPart(c *Client, r *Request) (err error) {
+	if r.RetryAttempt > 0 && len(r.Body) > 0 && r.GetBody != nil {
+		return
+	}
 	var b string
 	if c.multipartBoundaryFunc != nil {
 		b = c.multipartBoundaryFunc()
@@ -315,6 +318,8 @@ func unmarshalBody(c *Client, r *Response, v any) (err error) {
 		return c.jsonUnmarshal(body, v)
 	} else if util.IsXMLType(mediaType) {
 		return c.xmlUnmarshal(body, v)
+	} else if mediaType == "" {
+		return errors.New("missing Content-Type, cannot determine unmarshal format")
 	} else {
 		if c.DebugLog {
 			c.log.Debugf("cannot determine the unmarshal function with %q Content-Type, default to json", ct)
@@ -342,10 +347,11 @@ func parseResponseBody(c *Client, r *Response) (err error) {
 		return
 	}
 	req := r.Request
+	noBody := r.StatusCode == http.StatusNoContent || r.StatusCode == http.StatusNotModified
 	switch r.ResultState() {
 	case SuccessState:
 		if req.Result != nil {
-			if r.StatusCode != http.StatusNoContent {
+			if !noBody {
 				err = unmarshalBody(c, r, r.Request.Result)
 			}
 			if err == nil {
@@ -354,7 +360,7 @@ func parseResponseBody(c *Client, r *Response) (err error) {
 		}
 	case ErrorState:
 		if req.Error != nil {
-			if r.StatusCode != http.StatusNoContent {
+			if !noBody {
 				err = unmarshalBody(c, r, req.Error)
 			}
 			if err == nil {
@@ -362,7 +368,7 @@ func parseResponseBody(c *Client, r *Response) (err error) {
 			}
 		} else if c.commonErrorType != nil {
 			e := reflect.New(c.commonErrorType).Interface()
-			if r.StatusCode != http.StatusNoContent {
+			if !noBody {
 				err = unmarshalBody(c, r, e)
 			}
 			if err == nil {

@@ -105,8 +105,6 @@ func stripUserInfo(host string) string {
 func getHostname(host string) string {
 	host = stripUserInfo(host)
 	host = stripPort(host)
-	host = strings.TrimPrefix(host, "[")
-	host = strings.TrimSuffix(host, "]")
 	return strings.ToLower(host)
 }
 
@@ -116,12 +114,17 @@ func extractHostname(host string) string {
 
 func getDomain(host string) string {
 	hostname := getHostname(host)
-	if net.ParseIP(hostname) != nil {
-		return hostname
+	raw := hostname
+	isIPv6 := strings.HasPrefix(raw, "[") && strings.HasSuffix(raw, "]")
+	if isIPv6 {
+		raw = raw[1 : len(raw)-1]
 	}
-	domain, err := publicsuffix.EffectiveTLDPlusOne(hostname)
+	if net.ParseIP(raw) != nil {
+		return strings.ToLower(hostname)
+	}
+	domain, err := publicsuffix.EffectiveTLDPlusOne(raw)
 	if err != nil {
-		return hostname
+		return strings.ToLower(hostname)
 	}
 	return strings.ToLower(domain)
 }

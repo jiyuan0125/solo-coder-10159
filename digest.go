@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"net/http"
-	"reflect"
 	"sync"
 
 	"github.com/icholy/digest"
@@ -163,73 +162,24 @@ func handleDigestAuthFunc(username, password string) ResponseMiddleware {
 			return err
 		}
 
-		req := *r.RawRequest
-		if req.Body != nil || req.GetBody != nil {
-			err = parseRequestBody(client, r)
-			if err != nil {
-				return err
-			}
-			if r.GetBody != nil {
-				body, bodyErr := r.GetBody()
-				if bodyErr != nil {
-					return bodyErr
-				}
-				req.Body = body
-				req.GetBody = r.GetBody
-			}
-		}
-		if req.Header == nil {
-			req.Header = make(http.Header)
-		}
-		req.Header.Set(header.Authorization, cred.String())
-		req.Header.Set(digestAttemptedHeader, "1")
+		r.SetHeader(header.Authorization, cred.String())
+		r.SetHeader(digestAttemptedHeader, "1")
 
-		var httpResponse *http.Response
-		httpResponse, err = client.httpClient.Do(&req)
+		var newResp *Response
+		if client.wrappedRoundTrip != nil {
+			newResp, err = client.wrappedRoundTrip.RoundTrip(r)
+		} else {
+			newResp, err = client.roundTrip(r)
+		}
 		if err != nil {
 			return err
 		}
-		resp.Response = httpResponse
 
-		if resp.Err == nil && !client.disableAutoReadResponse && !r.isSaveResponse && !r.disableAutoReadResponse && resp.StatusCode > 199 {
-			resp.ToBytes()
-			resp.Body = io.NopCloser(bytes.NewReader(resp.body))
-		}
-
-		switch resp.ResultState() {
-		case SuccessState:
-			if r.Result != nil {
-				if resp.StatusCode != http.StatusNoContent {
-					unmarshalErr := unmarshalBody(client, resp, r.Result)
-					if unmarshalErr == nil {
-						resp.result = r.Result
-					}
-				} else {
-					resp.result = r.Result
-				}
-			}
-		case ErrorState:
-			if r.Error != nil {
-				if resp.StatusCode != http.StatusNoContent {
-					unmarshalErr := unmarshalBody(client, resp, r.Error)
-					if unmarshalErr == nil {
-						resp.error = r.Error
-					}
-				} else {
-					resp.error = r.Error
-				}
-			} else if client.commonErrorType != nil {
-				e := reflect.New(client.commonErrorType).Interface()
-				if resp.StatusCode != http.StatusNoContent {
-					unmarshalErr := unmarshalBody(client, resp, e)
-					if unmarshalErr == nil {
-						resp.error = e
-					}
-				} else {
-					resp.error = e
-				}
-			}
-		}
+		resp.Response = newResp.Response
+		resp.Err = newResp.Err
+		resp.body = newResp.body
+		resp.result = newResp.result
+		resp.error = newResp.error
 
 		return nil
 	}

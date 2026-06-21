@@ -3,21 +3,83 @@ package req
 import (
 	"github.com/imroc/req/v3/internal/charsets"
 	"io"
+	"mime"
 	"strings"
 )
 
-var textContentTypes = []string{"text/", "json", "xml", "html", "javascript"}
+var autoDecodeText = autoDecodeContentTypeFunc("text", "json", "xml", "html", "javascript")
 
-var autoDecodeText = autoDecodeContentTypeFunc(textContentTypes...)
+var knownTextSubtypes = map[string]bool{
+	"plain":                true,
+	"html":                 true,
+	"xml":                  true,
+	"css":                  true,
+	"csv":                  true,
+	"markdown":             true,
+	"calendar":             true,
+	"vcard":                true,
+	"richtext":             true,
+	"tab-separated-values": true,
+	"uri-list":             true,
+	"json":                 true,
+	"javascript":           true,
+	"ecmascript":           true,
+	"x-javascript":         true,
+	"x-ecmascript":         true,
+}
 
 func autoDecodeContentTypeFunc(contentTypes ...string) func(contentType string) bool {
+	hasTextWildcard := false
+	for _, ct := range contentTypes {
+		if strings.ToLower(strings.TrimSpace(ct)) == "text" {
+			hasTextWildcard = true
+			break
+		}
+	}
 	return func(contentType string) bool {
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			return false
+		}
+		mediaType = strings.ToLower(mediaType)
+		idx := strings.Index(mediaType, "/")
+		if idx < 0 {
+			return false
+		}
+		mainType := mediaType[:idx]
+		subType := mediaType[idx+1:]
+		if hasTextWildcard && mainType == "text" && knownTextSubtypes[subType] {
+			return true
+		}
 		for _, ct := range contentTypes {
-			if strings.Contains(contentType, ct) {
-				if ct == "json" && (strings.Contains(contentType, "jsonl") || strings.Contains(contentType, "jsonlines") || strings.Contains(contentType, "x-jsonlines")) {
-					continue
+			ct = strings.ToLower(strings.TrimSpace(ct))
+			switch ct {
+			case "text":
+				continue
+			case "json":
+				if strings.Contains(subType, "json") {
+					if subType == "jsonl" || subType == "jsonlines" || subType == "x-jsonlines" {
+						continue
+					}
+					return true
 				}
-				return true
+			case "xml":
+				if strings.Contains(subType, "xml") {
+					return true
+				}
+			case "html":
+				if subType == "html" {
+					return true
+				}
+			case "javascript":
+				if subType == "javascript" || subType == "ecmascript" ||
+					subType == "x-javascript" || subType == "x-ecmascript" {
+					return true
+				}
+			default:
+				if subType == ct || mediaType == ct {
+					return true
+				}
 			}
 		}
 		return false

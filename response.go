@@ -1,6 +1,7 @@
 package req
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -185,6 +186,9 @@ func (r *Response) Unmarshal(v any) error {
 	mediaType := ct
 	if idx := strings.Index(ct, ";"); idx >= 0 {
 		mediaType = strings.TrimSpace(ct[:idx])
+	}
+	if mediaType == "" {
+		return errors.New("missing Content-Type, cannot determine unmarshal format")
 	}
 	if util.IsJSONType(mediaType) {
 		return r.UnmarshalJson(v)
