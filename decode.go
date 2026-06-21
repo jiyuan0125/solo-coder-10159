@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var autoDecodeText = autoDecodeContentTypeFunc("text", "json", "xml", "html", "javascript")
+var autoDecodeText = autoDecodeContentTypeFunc("text", "json", "xml", "html")
 
 var knownTextSubtypes = map[string]bool{
 	"plain":                true,
@@ -22,10 +22,6 @@ var knownTextSubtypes = map[string]bool{
 	"tab-separated-values": true,
 	"uri-list":             true,
 	"json":                 true,
-	"javascript":           true,
-	"ecmascript":           true,
-	"x-javascript":         true,
-	"x-ecmascript":         true,
 }
 
 func autoDecodeContentTypeFunc(contentTypes ...string) func(contentType string) bool {
