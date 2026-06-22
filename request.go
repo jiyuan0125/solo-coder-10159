@@ -68,6 +68,7 @@ type Request struct {
 	dumpBuffer               *bytes.Buffer
 	responseReturnTime       time.Time
 	afterResponse            []ResponseMiddleware
+	digestAuthNeedRetry      bool
 }
 
 type GetContentFunc func() (io.ReadCloser, error)
@@ -704,17 +705,26 @@ func (r *Request) do() (resp *Response, err error) {
 			}
 		}
 
-		if contextCanceled || r.retryOption == nil || (r.RetryAttempt >= r.retryOption.MaxRetries && r.retryOption.MaxRetries >= 0) { // absolutely cannot retry.
+		if contextCanceled { // absolutely cannot retry.
 			return
 		}
 
 		// check retry whether is needed.
-		needRetry := err != nil                             // default behaviour: retry if error occurs
-		if l := len(r.retryOption.RetryConditions); l > 0 { // override default behaviour if custom RetryConditions has been set.
-			for i := l - 1; i >= 0; i-- {
-				needRetry = r.retryOption.RetryConditions[i](resp, err)
-				if needRetry {
-					break
+		needRetry := false
+		isDigestRetry := false
+		if r.digestAuthNeedRetry {
+			r.digestAuthNeedRetry = false
+			needRetry = true
+			isDigestRetry = true
+		} else if r.retryOption != nil && !(r.RetryAttempt >= r.retryOption.MaxRetries && r.retryOption.MaxRetries >= 0) {
+			needRetry = err != nil // default behaviour: retry if error occurs
+			if l := len(r.retryOption.RetryConditions); l > 0 { // override default behaviour if custom RetryConditions has been set.
+				needRetry = false
+				for i := l - 1; i >= 0; i-- {
+					needRetry = r.retryOption.RetryConditions[i](resp, err)
+					if needRetry {
+						break
+					}
 				}
 			}
 		}
@@ -724,12 +734,14 @@ func (r *Request) do() (resp *Response, err error) {
 
 		// need retry, attempt to retry
 		r.RetryAttempt++
-		if l := len(r.retryOption.RetryHooks); l > 0 {
-			for i := l - 1; i >= 0; i-- { // run retry hooks in reverse order
-				r.retryOption.RetryHooks[i](resp, err)
+		if !isDigestRetry && r.retryOption != nil {
+			if l := len(r.retryOption.RetryHooks); l > 0 {
+				for i := l - 1; i >= 0; i-- { // run retry hooks in reverse order
+					r.retryOption.RetryHooks[i](resp, err)
+				}
 			}
+			time.Sleep(r.retryOption.GetRetryInterval(resp, r.RetryAttempt))
 		}
-		time.Sleep(r.retryOption.GetRetryInterval(resp, r.RetryAttempt))
 
 		// clean up before retry
 		if r.dumpBuffer != nil {

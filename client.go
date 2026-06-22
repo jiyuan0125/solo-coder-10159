@@ -51,7 +51,6 @@ type Client struct {
 	DebugLog              bool
 	AllowGetMethodPayload bool
 	*Transport
-	digestAuth              *digestAuth
 	cookiejarFactory        func() *cookiejar.Jar
 	trace                   bool
 	disableAutoReadResponse bool
@@ -870,13 +869,7 @@ func (c *Client) SetCommonBasicAuth(username, password string) *Client {
 //
 //	https://datatracker.ietf.org/doc/html/rfc7616
 func (c *Client) SetCommonDigestAuth(username, password string) *Client {
-	c.digestAuth = &digestAuth{
-		Username:   username,
-		Password:   password,
-		HttpClient: c.httpClient,
-		cache:      make(map[string]*cchal),
-	}
-	c.Transport.WrapRoundTripFunc(c.digestAuth.HttpRoundTripWrapperFunc)
+	c.OnAfterResponse(handleCommonDigestAuthFunc(username, password))
 	return c
 }
 
