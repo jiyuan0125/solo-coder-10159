@@ -1,0 +1,4 @@
+# import config
+packagefile errors=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b003/_pkg_.a
+packagefile internal/bytealg=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b010/_pkg_.a
+packagefile unicode/utf8=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b045/_pkg_.a

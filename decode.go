@@ -3,17 +3,65 @@ package req
 import (
 	"github.com/imroc/req/v3/internal/charsets"
 	"io"
+	"mime"
 	"strings"
 )
 
-var textContentTypes = []string{"text", "json", "xml", "html", "java"}
+func isTextContentType(contentType string) bool {
+	if contentType == "" {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	if strings.HasPrefix(mediaType, "text/") {
+		return true
+	}
+	switch mediaType {
+	case "application/json", "application/xml", "application/xhtml+xml",
+		"application/rss+xml", "application/atom+xml",
+		"application/javascript", "application/ecmascript":
+		return true
+	}
+	if strings.HasSuffix(mediaType, "+json") || strings.HasSuffix(mediaType, "+xml") {
+		return true
+	}
+	if strings.HasSuffix(mediaType, "+html") {
+		return true
+	}
+	return false
+}
 
-var autoDecodeText = autoDecodeContentTypeFunc(textContentTypes...)
+var autoDecodeText = isTextContentType
 
 func autoDecodeContentTypeFunc(contentTypes ...string) func(contentType string) bool {
 	return func(contentType string) bool {
+		if contentType == "" {
+			return false
+		}
+		mediaType, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			return false
+		}
 		for _, ct := range contentTypes {
-			if strings.Contains(contentType, ct) {
+			ct = strings.ToLower(strings.TrimSpace(ct))
+			if ct == "" {
+				continue
+			}
+			if strings.HasPrefix(mediaType, ct+"/") {
+				return true
+			}
+			if mediaType == "application/"+ct {
+				return true
+			}
+			if strings.HasPrefix(ct, "+") && strings.HasSuffix(mediaType, ct) {
+				return true
+			}
+			if mediaType == ct {
+				return true
+			}
+			if strings.Contains(mediaType, "/"+ct+"+") {
 				return true
 			}
 		}

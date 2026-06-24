@@ -1,0 +1,5 @@
+./brotli_reader.go
+./deflate_reader.go
+./gzip_reader.go
+./reader.go
+./zstd_reader.go

@@ -3,6 +3,7 @@ package req
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -155,19 +156,19 @@ func handleMultiPart(c *Client, r *Request) (err error) {
 	}
 
 	if r.forceChunkedEncoding {
-		pr, pw := io.Pipe()
 		r.GetBody = func() (io.ReadCloser, error) {
+			pr, pw := io.Pipe()
+			w := multipart.NewWriter(pw)
+			if len(b) > 0 {
+				w.SetBoundary(b)
+			}
+			r.SetContentType(w.FormDataContentType())
+			go func() {
+				writeMultiPart(r, w)
+				pw.Close()
+			}()
 			return pr, nil
 		}
-		w := multipart.NewWriter(pw)
-		if len(b) > 0 {
-			w.SetBoundary(b)
-		}
-		r.SetContentType(w.FormDataContentType())
-		go func() {
-			writeMultiPart(r, w)
-			pw.Close() // close pipe writer so that pipe reader could get EOF, and stop upload
-		}()
 	} else {
 		buf := new(bytes.Buffer)
 		w := multipart.NewWriter(buf)
@@ -293,7 +294,7 @@ func parseRequestBody(c *Client, r *Request) (err error) {
 }
 
 func unmarshalBody(c *Client, r *Response, v any) (err error) {
-	body, err := r.ToBytes() // in case req.SetResult or req.SetError with client.DisableAutoReadResponse(true)
+	body, err := r.ToBytes()
 	if err != nil {
 		return
 	}
@@ -302,22 +303,36 @@ func unmarshalBody(c *Client, r *Response, v any) (err error) {
 		return c.jsonUnmarshal(body, v)
 	} else if util.IsXMLType(ct) {
 		return c.xmlUnmarshal(body, v)
+	} else if ct == "" {
+		if c.DebugLog {
+			c.log.Debugf("no Content-Type header, fallback to json unmarshal, body length: %d", len(body))
+		}
+		err = c.jsonUnmarshal(body, v)
+		if err != nil {
+			return fmt.Errorf("no Content-Type header, tried json unmarshal but failed: %w (body length: %d)", err, len(body))
+		}
+		return nil
 	} else {
 		if c.DebugLog {
-			c.log.Debugf("cannot determine the unmarshal function with %q Content-Type, default to json", ct)
+			c.log.Debugf("Content-Type %q is not json or xml, fallback to json unmarshal for compatibility", ct)
 		}
-		return c.jsonUnmarshal(body, v)
+		err = c.jsonUnmarshal(body, v)
+		if err != nil {
+			return fmt.Errorf("Content-Type %q is not a supported type for auto-unmarshal (tried json unmarshal but failed: %w)", ct, err)
+		}
+		return nil
 	}
 }
 
 func defaultResultStateChecker(resp *Response) ResultState {
-	if code := resp.StatusCode; code > 199 && code < 300 {
+	if code := resp.StatusCode; code >= 200 && code < 300 {
 		return SuccessState
-	} else if code > 399 {
+	} else if code >= 400 {
 		return ErrorState
-	} else {
-		return UnknownState
+	} else if code >= 300 && code < 400 {
+		return SuccessState
 	}
+	return UnknownState
 }
 
 func parseResponseBody(c *Client, r *Response) (err error) {
@@ -325,12 +340,17 @@ func parseResponseBody(c *Client, r *Response) (err error) {
 		return
 	}
 	req := r.Request
-	switch r.ResultState() {
+	state := r.ResultState()
+	switch state {
 	case SuccessState:
-		if req.Result != nil && r.StatusCode != http.StatusNoContent {
-			err = unmarshalBody(c, r, r.Request.Result)
-			if err == nil {
-				r.result = r.Request.Result
+		if req.Result != nil {
+			if r.StatusCode == http.StatusNoContent || r.StatusCode == http.StatusNotModified {
+				r.result = req.Result
+			} else {
+				err = unmarshalBody(c, r, r.Request.Result)
+				if err == nil {
+					r.result = r.Request.Result
+				}
 			}
 		}
 	case ErrorState:
@@ -541,9 +561,20 @@ func parseRequestHeader(c *Client, r *Request) error {
 }
 
 func parseRequestCookie(c *Client, r *Request) error {
-	if len(c.Cookies) > 0 || r.RetryAttempt <= 0 {
-		r.Cookies = append(r.Cookies, c.Cookies...)
+	if r.RetryAttempt > 0 {
+		return nil
 	}
-
+	if len(c.Cookies) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(r.Cookies))
+	for _, cookie := range r.Cookies {
+		seen[cookie.Name] = struct{}{}
+	}
+	for _, cookie := range c.Cookies {
+		if _, ok := seen[cookie.Name]; !ok {
+			r.Cookies = append(r.Cookies, cookie)
+		}
+	}
 	return nil
 }

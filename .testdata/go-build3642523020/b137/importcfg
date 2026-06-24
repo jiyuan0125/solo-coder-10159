@@ -1,0 +1,6 @@
+# import config
+packagefile errors=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b003/_pkg_.a
+packagefile internal/byteorder=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b012/_pkg_.a
+packagefile internal/chacha8rand=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b013/_pkg_.a
+packagefile math=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b058/_pkg_.a
+packagefile math/bits=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b023/_pkg_.a

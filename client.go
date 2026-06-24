@@ -1742,7 +1742,12 @@ func (c *Client) roundTrip(r *Request) (resp *Response, err error) {
 		GetBody:       r.GetBody,
 		Close:         r.close,
 	}
+	cookieAdded := make(map[string]struct{}, len(r.Cookies))
 	for _, cookie := range r.Cookies {
+		if _, ok := cookieAdded[cookie.Name]; ok {
+			continue
+		}
+		cookieAdded[cookie.Name] = struct{}{}
 		req.AddCookie(cookie)
 	}
 	if r.isSaveResponse && r.downloadCallback != nil {

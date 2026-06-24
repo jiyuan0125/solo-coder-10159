@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
+	"mime"
 	"os"
 	"reflect"
 	"strings"
@@ -10,12 +11,38 @@ import (
 
 // IsJSONType method is to check JSON content type or not
 func IsJSONType(ct string) bool {
-	return strings.Contains(ct, "json")
+	if ct == "" {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(ct)
+	if err != nil {
+		return false
+	}
+	if mediaType == "application/json" || mediaType == "text/json" {
+		return true
+	}
+	if strings.HasSuffix(mediaType, "+json") {
+		return true
+	}
+	return false
 }
 
 // IsXMLType method is to check XML content type or not
 func IsXMLType(ct string) bool {
-	return strings.Contains(ct, "xml")
+	if ct == "" {
+		return false
+	}
+	mediaType, _, err := mime.ParseMediaType(ct)
+	if err != nil {
+		return false
+	}
+	if mediaType == "application/xml" || mediaType == "text/xml" || mediaType == "application/xhtml+xml" {
+		return true
+	}
+	if strings.HasSuffix(mediaType, "+xml") {
+		return true
+	}
+	return false
 }
 
 // GetPointer return the pointer of the interface.

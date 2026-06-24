@@ -1,0 +1,8 @@
+# import config
+packagefile internal/abi=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b005/_pkg_.a
+packagefile internal/asan=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b029/_pkg_.a
+packagefile internal/goarch=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b006/_pkg_.a
+packagefile internal/msan=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b030/_pkg_.a
+packagefile internal/race=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b031/_pkg_.a
+packagefile internal/runtime/math=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b032/_pkg_.a
+packagefile internal/runtime/sys=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b027/_pkg_.a

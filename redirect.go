@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"strings"
+
+	"golang.org/x/net/publicsuffix"
 )
 
 // RedirectPolicy represents the redirect policy for Client.
@@ -62,7 +64,7 @@ func SameHostRedirectPolicy() RedirectPolicy {
 func AllowedHostRedirectPolicy(hosts ...string) RedirectPolicy {
 	m := make(map[string]struct{})
 	for _, h := range hosts {
-		m[strings.ToLower(getHostname(h))] = struct{}{}
+		m[getHostname(h)] = struct{}{}
 	}
 
 	return func(req *http.Request, via []*http.Request) error {
@@ -79,7 +81,7 @@ func AllowedHostRedirectPolicy(hosts ...string) RedirectPolicy {
 func AllowedDomainRedirectPolicy(hosts ...string) RedirectPolicy {
 	domains := make(map[string]struct{})
 	for _, h := range hosts {
-		domains[strings.ToLower(getDomain(h))] = struct{}{}
+		domains[getDomain(h)] = struct{}{}
 	}
 
 	return func(req *http.Request, via []*http.Request) error {
@@ -91,9 +93,26 @@ func AllowedDomainRedirectPolicy(hosts ...string) RedirectPolicy {
 	}
 }
 
+func stripUserinfo(host string) string {
+	if idx := strings.LastIndex(host, "@"); idx != -1 {
+		return host[idx+1:]
+	}
+	return host
+}
+
 func getHostname(host string) (hostname string) {
-	if strings.Index(host, ":") > 0 {
-		host, _, _ = net.SplitHostPort(host)
+	host = stripUserinfo(host)
+	if strings.HasPrefix(host, "[") {
+		if end := strings.Index(host, "]"); end != -1 {
+			hostname = host[1:end]
+			hostname = strings.ToLower(hostname)
+			return
+		}
+	}
+	if strings.IndexByte(host, ':') != -1 {
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
 	}
 	hostname = strings.ToLower(host)
 	return
@@ -101,12 +120,14 @@ func getHostname(host string) (hostname string) {
 
 func getDomain(host string) string {
 	host = getHostname(host)
-	ss := strings.Split(host, ".")
-	if len(ss) < 3 {
+	if ip := net.ParseIP(host); ip != nil {
 		return host
 	}
-	ss = ss[1:]
-	return strings.Join(ss, ".")
+	domain, err := publicsuffix.EffectiveTLDPlusOne(host)
+	if err != nil {
+		return host
+	}
+	return strings.ToLower(domain)
 }
 
 // AlwaysCopyHeaderRedirectPolicy ensures that the given sensitive headers will

@@ -1,0 +1,4 @@
+# import config
+packagefile internal/reflectlite=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b004/_pkg_.a
+packagefile math/bits=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b023/_pkg_.a
+packagefile slices=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b046/_pkg_.a

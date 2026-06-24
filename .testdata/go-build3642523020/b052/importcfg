@@ -1,0 +1,15 @@
+# import config
+packagefile errors=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b003/_pkg_.a
+packagefile internal/asan=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b029/_pkg_.a
+packagefile internal/bytealg=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b010/_pkg_.a
+packagefile internal/byteorder=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b012/_pkg_.a
+packagefile internal/goarch=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b006/_pkg_.a
+packagefile internal/msan=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b030/_pkg_.a
+packagefile internal/oserror=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b038/_pkg_.a
+packagefile internal/race=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b031/_pkg_.a
+packagefile internal/runtime/syscall/linux=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b021/_pkg_.a
+packagefile internal/strconv=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b022/_pkg_.a
+packagefile runtime=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b009/_pkg_.a
+packagefile slices=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b046/_pkg_.a
+packagefile sync=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b040/_pkg_.a
+packagefile sync/atomic=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b042/_pkg_.a

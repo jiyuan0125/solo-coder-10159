@@ -1,0 +1,5 @@
+# import config
+packagefile crypto/internal/constanttime=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b094/_pkg_.a
+packagefile crypto/internal/fips140/alias=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b085/_pkg_.a
+packagefile crypto/internal/fips140deps/byteorder=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b089/_pkg_.a
+packagefile math/bits=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b023/_pkg_.a

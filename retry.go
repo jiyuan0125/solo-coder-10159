@@ -25,9 +25,37 @@ func backoffInterval(min, max time.Duration) GetRetryIntervalFunc {
 	base := float64(min)
 	capLevel := float64(max)
 	return func(resp *Response, attempt int) time.Duration {
-		temp := math.Min(capLevel, base*math.Exp2(float64(attempt)))
+		if attempt < 0 {
+			attempt = 0
+		}
+		var temp float64
+		if base <= 0 {
+			temp = 0
+		} else {
+			exp := math.Exp2(float64(attempt))
+			if math.IsInf(exp, 1) || math.IsNaN(exp) {
+				temp = capLevel
+			} else {
+				temp = base * exp
+				if math.IsInf(temp, 1) || math.IsNaN(temp) {
+					temp = capLevel
+				}
+			}
+		}
+		if capLevel >= 0 && temp > capLevel {
+			temp = capLevel
+		}
+		if temp <= 0 {
+			return 0
+		}
 		halfTemp := int64(temp / 2)
+		if halfTemp <= 0 {
+			return time.Duration(int64(temp))
+		}
 		sleep := halfTemp + rand.Int63n(halfTemp)
+		if sleep < 0 {
+			sleep = 0
+		}
 		return time.Duration(sleep)
 	}
 }

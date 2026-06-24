@@ -1,0 +1,26 @@
+# import config
+packagefile internal/abi=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b005/_pkg_.a
+packagefile internal/bytealg=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b010/_pkg_.a
+packagefile internal/byteorder=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b012/_pkg_.a
+packagefile internal/chacha8rand=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b013/_pkg_.a
+packagefile internal/coverage/rtcov=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b014/_pkg_.a
+packagefile internal/cpu=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b011/_pkg_.a
+packagefile internal/goarch=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b006/_pkg_.a
+packagefile internal/godebugs=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b015/_pkg_.a
+packagefile internal/goexperiment=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b016/_pkg_.a
+packagefile internal/goos=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b017/_pkg_.a
+packagefile internal/profilerecord=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b018/_pkg_.a
+packagefile internal/runtime/atomic=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b019/_pkg_.a
+packagefile internal/runtime/cgroup=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b020/_pkg_.a
+packagefile internal/runtime/exithook=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b024/_pkg_.a
+packagefile internal/runtime/gc=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b025/_pkg_.a
+packagefile internal/runtime/gc/scan=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b026/_pkg_.a
+packagefile internal/runtime/maps=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b028/_pkg_.a
+packagefile internal/runtime/math=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b032/_pkg_.a
+packagefile internal/runtime/pprof/label=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b033/_pkg_.a
+packagefile internal/runtime/sys=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b027/_pkg_.a
+packagefile internal/runtime/syscall/linux=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b021/_pkg_.a
+packagefile internal/strconv=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b022/_pkg_.a
+packagefile internal/stringslite=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b034/_pkg_.a
+packagefile internal/trace/tracev2=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b035/_pkg_.a
+packagefile math/bits=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b023/_pkg_.a

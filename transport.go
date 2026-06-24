@@ -680,7 +680,7 @@ func (t *Transport) wrapResponseBody(res *http.Response, wrap wrapResponseBodyFu
 }
 
 func (t *Transport) autoDecodeResponseBody(res *http.Response) {
-	if t.disableAutoDecode || res.Header.Get("Accept-Encoding") != "" {
+	if t.disableAutoDecode {
 		return
 	}
 	contentType := res.Header.Get("Content-Type")

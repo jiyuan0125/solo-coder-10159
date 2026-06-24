@@ -1,0 +1,4 @@
+# import config
+packagefile internal/bytealg=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b010/_pkg_.a
+packagefile internal/runtime/syscall/linux=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b021/_pkg_.a
+packagefile internal/strconv=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b022/_pkg_.a

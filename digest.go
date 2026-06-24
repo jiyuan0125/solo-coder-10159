@@ -49,16 +49,21 @@ func (da *digestAuth) challenge(req *http.Request) (*digest.Challenge, int, bool
 	return cc.c, cc.n, true
 }
 
+func (da *digestAuth) clearChallenge(req *http.Request) {
+	da.cacheMu.Lock()
+	defer da.cacheMu.Unlock()
+	host := req.URL.Hostname()
+	delete(da.cache, host)
+}
+
 // prepare attempts to find a cached challenge that matches the
 // requested domain, and use it to set the Authorization header
 func (da *digestAuth) prepare(req *http.Request) error {
-	// add cookies
 	if da.HttpClient.Jar != nil {
 		for _, cookie := range da.HttpClient.Jar.Cookies(req.URL) {
 			req.AddCookie(cookie)
 		}
 	}
-	// add auth
 	chal, count, ok := da.challenge(req)
 	if !ok {
 		return nil
@@ -80,62 +85,64 @@ func (da *digestAuth) HttpRoundTripWrapperFunc(rt http.RoundTripper) HttpRoundTr
 			return nil, err
 		}
 
-		// make a copy of the request
 		first, err := clone()
 		if err != nil {
 			return nil, err
 		}
 
-		// prepare the first request using a cached challenge
 		if err := da.prepare(first); err != nil {
 			return nil, err
 		}
 
-		// the first request will either succeed or return a 401
 		res, err := rt.RoundTrip(first)
 		if err != nil || res.StatusCode != http.StatusUnauthorized {
 			return res, err
 		}
 
-		// drain and close the first message body
 		_, _ = io.Copy(io.Discard, res.Body)
 		_ = res.Body.Close()
 
-		// find and cache the challenge
 		host := req.URL.Hostname()
-		chal, err := digest.FindChallenge(res.Header)
-		if err != nil {
-			// existing cached challenge didn't work, so remove it
+		chal, chalErr := digest.FindChallenge(res.Header)
+		if chalErr != nil {
 			da.cacheMu.Lock()
 			delete(da.cache, host)
 			da.cacheMu.Unlock()
-			if err == digest.ErrNoChallenge {
+			if chalErr == digest.ErrNoChallenge {
 				return res, nil
 			}
-			return nil, err
-		} else {
-			// found new challenge, so cache it
-			da.cacheMu.Lock()
-			da.cache[host] = &cchal{c: chal}
-			da.cacheMu.Unlock()
+			return nil, chalErr
 		}
 
-		// make a second copy of the request
+		da.cacheMu.Lock()
+		da.cache[host] = &cchal{c: chal}
+		da.cacheMu.Unlock()
+
 		second, err := clone()
 		if err != nil {
 			return nil, err
 		}
 
-		// prepare the second request based on the new challenge
 		if err := da.prepare(second); err != nil {
+			da.cacheMu.Lock()
+			delete(da.cache, host)
+			da.cacheMu.Unlock()
 			return nil, err
 		}
 
-		return rt.RoundTrip(second)
+		res2, err := rt.RoundTrip(second)
+		if err != nil {
+			return res2, err
+		}
+		if res2.StatusCode == http.StatusUnauthorized {
+			da.cacheMu.Lock()
+			delete(da.cache, host)
+			da.cacheMu.Unlock()
+		}
+		return res2, nil
 	}
 }
 
-// create response middleware for http digest authentication.
 func handleDigestAuthFunc(username, password string) ResponseMiddleware {
 	return func(client *Client, resp *Response) error {
 		if resp.Err != nil || resp.StatusCode != http.StatusUnauthorized {
@@ -143,30 +150,37 @@ func handleDigestAuthFunc(username, password string) ResponseMiddleware {
 		}
 		auth, err := createDigestAuth(resp.Request.RawRequest, resp.Response, username, password)
 		if err != nil {
+			if err == digest.ErrNoChallenge {
+				return nil
+			}
 			return err
 		}
 		r := resp.Request
-		req := *r.RawRequest
-		if req.Body != nil {
-			err = parseRequestBody(client, r) // re-setup body
-			if err != nil {
-				return err
-			}
-			if r.GetBody != nil {
-				body, err := r.GetBody()
-				if err != nil {
-					return err
-				}
-				req.Body = body
-				req.GetBody = r.GetBody
+		r.SetHeader(header.Authorization, auth)
+		for _, f := range r.client.udBeforeRequest {
+			if e := f(r.client, r); e != nil {
+				return e
 			}
 		}
-		if req.Header == nil {
-			req.Header = make(http.Header)
+		var newResp *Response
+		var newErr error
+		if r.client.wrappedRoundTrip != nil {
+			newResp, newErr = r.client.wrappedRoundTrip.RoundTrip(r)
+		} else {
+			newResp, newErr = r.client.roundTrip(r)
 		}
-		req.Header.Set(header.Authorization, auth)
-		resp.Response, err = client.httpClient.Do(&req)
-		return err
+		if newResp != nil {
+			resp.Response = newResp.Response
+			resp.body = newResp.Bytes()
+			resp.receivedAt = newResp.receivedAt
+			resp.result = newResp.result
+			resp.error = newResp.error
+			resp.Err = newResp.Err
+		}
+		if newErr != nil && resp.Err == nil {
+			resp.Err = newErr
+		}
+		return nil
 	}
 }
 
@@ -189,11 +203,8 @@ func createDigestAuth(req *http.Request, resp *http.Response, username, password
 	return cred.String(), nil
 }
 
-// cloner returns a function which makes clones of the provided request
 func cloner(req *http.Request) (func() (*http.Request, error), error) {
 	getbody := req.GetBody
-	// if there's no GetBody function set we have to copy the body
-	// into memory to use for future clones
 	if getbody == nil {
 		if req.Body == nil || req.Body == http.NoBody {
 			getbody = func() (io.ReadCloser, error) {

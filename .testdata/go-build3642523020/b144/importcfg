@@ -1,0 +1,4 @@
+# import config
+packagefile runtime=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b009/_pkg_.a
+packagefile sync=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b040/_pkg_.a
+packagefile weak=/home/baru/sc-workspace/10159_20260622131238/10159_20260622131238_imroc_req/.testdata/go-build3642523020/b145/_pkg_.a

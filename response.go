@@ -1,9 +1,9 @@
 package req
 
 import (
+	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/imroc/req/v3/internal/header"
@@ -182,12 +182,23 @@ func (r *Response) Unmarshal(v any) error {
 	}
 	v = util.GetPointer(v)
 	contentType := r.Header.Get("Content-Type")
-	if strings.Contains(contentType, "json") {
+	if util.IsJSONType(contentType) {
 		return r.UnmarshalJson(v)
-	} else if strings.Contains(contentType, "xml") {
+	} else if util.IsXMLType(contentType) {
 		return r.UnmarshalXml(v)
+	} else if contentType == "" {
+		err := r.UnmarshalJson(v)
+		if err != nil {
+			b, _ := r.ToBytes()
+			return fmt.Errorf("no Content-Type header, tried json unmarshal but failed: %w (body length: %d)", err, len(b))
+		}
+		return nil
 	}
-	return r.UnmarshalJson(v)
+	err := r.UnmarshalJson(v)
+	if err != nil {
+		return fmt.Errorf("Content-Type %q is not a supported type for auto-unmarshal (tried json unmarshal but failed: %w)", contentType, err)
+	}
+	return nil
 }
 
 // Into unmarshalls response body into the specified object according
